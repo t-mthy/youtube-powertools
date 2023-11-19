@@ -58,7 +58,7 @@ const App = () => {
 
       const thumbnailUrl = result.snippet.thumbnails.high.url;
       const duration = result.contentDetails.duration;
-      const durationInSeconds = convertISO8601ToSeconds(duration);
+      const durationInSeconds = convertISO8601ToSeconds(duration) - 1; // YT 1 sec less in actual video
       setThumbnail(thumbnailUrl);
       setVideoDuration(durationInSeconds);
       setLoopRange([0, durationInSeconds]);
@@ -109,9 +109,51 @@ const App = () => {
     ]);
   };
 
-  // Handle double-click on input box
-  const handleDoubleClick = () => {
-    // Logic to get current video timestamp and update input box
+  // Fetch current video time from content script for double-click
+  const fetchCurrentVideoTime = async () => {
+    return new Promise((resolve, reject) => {
+      chrome.tabs.sendMessage(
+        tabId,
+        { message: 'GetCurrentVideoTime' },
+        (response) => {
+          if (response && response.currentTime) {
+            resolve(response.currentTime);
+          } else {
+            reject('Failed to fetch current video time');
+          }
+        }
+      );
+    });
+  };
+
+  // Handle double-click on start time input box
+  const handleDoubleClickStartTime = async () => {
+    try {
+      const currentTime = await fetchCurrentVideoTime();
+      const formattedTime = convertSecondsToTime(currentTime);
+      setStartTime(formattedTime);
+      setLoopRange([
+        convertTimeToSeconds(formattedTime),
+        convertTimeToSeconds(endTime),
+      ]);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Handle double-click on end time input box
+  const handleDoubleClickEndTime = async () => {
+    try {
+      const currentTime = await fetchCurrentVideoTime();
+      const formattedTime = convertSecondsToTime(currentTime);
+      setEndTime(formattedTime);
+      setLoopRange([
+        convertTimeToSeconds(startTime),
+        convertTimeToSeconds(formattedTime),
+      ]);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   // Mount
@@ -145,7 +187,13 @@ const App = () => {
 
       {/* Loop Checkbox */}
       <FormControlLabel
-        control={<Checkbox checked={loopEnabled} onChange={toggleLoop} />}
+        control={
+          <Checkbox
+            checked={loopEnabled}
+            onChange={toggleLoop}
+            sx={{ color: 'red', '&.Mui-checked': { color: 'red' } }}
+          />
+        }
         label="Enable Loop"
       />
 
@@ -156,6 +204,7 @@ const App = () => {
         valueLabelDisplay="auto"
         min={0}
         max={videoDuration} // Set max to video duration
+        sx={{ color: 'red' }}
       />
 
       {/* Time Input Boxes */}
@@ -164,14 +213,14 @@ const App = () => {
           label="Start Time"
           value={startTime}
           onChange={(e) => handleTimeInput(e, true)}
-          onDoubleClick={handleDoubleClick}
+          onDoubleClick={handleDoubleClickStartTime}
           sx={{ width: '45%' }}
         />
         <TextField
           label="End Time"
           value={endTime}
           onChange={(e) => handleTimeInput(e, false)}
-          onDoubleClick={handleDoubleClick}
+          onDoubleClick={handleDoubleClickEndTime}
           sx={{ width: '45%' }}
         />
       </Box>

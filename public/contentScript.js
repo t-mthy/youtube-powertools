@@ -3,7 +3,7 @@ console.log('YouTube PowerTools loaded! (^_^)v');
 let loopAnimationFrameId; // Variable to store requestAnimationFrame ID
 
 // Function to control video playback
-function controlVideoPlayback(videoId, command, startTime, endTime) {
+function controlVideoPlayback(command, startTime, endTime) {
   const videoElement = document.querySelector('video');
   if (!videoElement) return;
 
@@ -26,22 +26,24 @@ function controlVideoPlayback(videoId, command, startTime, endTime) {
       loop();
       break;
     case 'stopLoop':
-      videoElement.pause();
+      // videoElement.pause(); // Optional: pause video when disabling loop
       break;
   }
 }
 
-// Listens for message from React, extracts vid ID from URL, sends it back
+// Listens for message from React, performs actions based on the message
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.message === 'GetYoutubeVideoId') {
     const videoId = window.location.search.split('v=')[1]?.split('&')[0];
     sendResponse({ videoId: videoId });
   } else if (request.message === 'ControlVideoPlayback') {
-    controlVideoPlayback(
-      request.videoId,
-      request.command,
-      request.startTime,
-      request.endTime
-    );
+    controlVideoPlayback(request.command, request.startTime, request.endTime);
+  } else if (request.message === 'GetCurrentVideoTime') {
+    const videoElement = document.querySelector('video');
+    if (videoElement) {
+      sendResponse({ currentTime: videoElement.currentTime });
+    } else {
+      sendResponse({ currentTime: null });
+    }
   }
 });
