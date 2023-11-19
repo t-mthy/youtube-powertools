@@ -1,9 +1,17 @@
 console.log('YouTube PowerTools loaded! (^_^)v');
 
+let loopAnimationFrameId; // Variable to store requestAnimationFrame ID
+
 // Function to control video playback
 function controlVideoPlayback(videoId, command, startTime, endTime) {
   const videoElement = document.querySelector('video');
   if (!videoElement) return;
+
+  // Cancel any existing loop to prevent overlapping loops
+  if (loopAnimationFrameId) {
+    cancelAnimationFrame(loopAnimationFrameId);
+    loopAnimationFrameId = null;
+  }
 
   switch (command) {
     case 'startLoop':
@@ -13,7 +21,7 @@ function controlVideoPlayback(videoId, command, startTime, endTime) {
         if (videoElement.currentTime >= endTime) {
           videoElement.currentTime = startTime;
         }
-        requestAnimationFrame(loop);
+        loopAnimationFrameId = requestAnimationFrame(loop);
       };
       loop();
       break;

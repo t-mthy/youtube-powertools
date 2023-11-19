@@ -23,26 +23,46 @@ const convertSecondsToTime = (seconds) => {
     .padStart(2, '0')}`;
 };
 
+// Utility function to convert ISO 8601 duration string to seconds int
+const convertISO8601ToSeconds = (iso8601Duration) => {
+  const regex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+  const matches = regex.exec(iso8601Duration);
+
+  const hours = parseInt(matches[1]) || 0;
+  const minutes = parseInt(matches[2]) || 0;
+  const seconds = parseInt(matches[3]) || 0;
+
+  return hours * 3600 + minutes * 60 + seconds;
+};
+
 const App = () => {
   // Extract tab ID from URL
   const tabId = parseInt(getTabIdFromURL());
 
   // States
   const [thumbnail, setThumbnail] = useState('');
+  const [videoDuration, setVideoDuration] = useState(0); // State for video duration
   const [loopEnabled, setLoopEnabled] = useState(false);
-  const [loopRange, setLoopRange] = useState([0, 100]); // Example range, replace with video duration
+  const [loopRange, setLoopRange] = useState([0, 100]); // Initial range, to be updated
   const [startTime, setStartTime] = useState('00:00');
-  const [endTime, setEndTime] = useState('00:00'); // Replace with video duration
+  const [endTime, setEndTime] = useState('00:00'); // To be updated based on video duration
 
-  // Video details
+  // Fetch video details including duration
   const fetchVideoDetails = async (videoId) => {
     const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
-    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`;
+    const url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`;
 
     try {
       const response = await axios.get(url);
-      const thumbnailUrl = response.data.items[0].snippet.thumbnails.high.url;
+      const result = response.data.items[0];
+
+      const thumbnailUrl = result.snippet.thumbnails.high.url;
+      const duration = result.contentDetails.duration;
+      const durationInSeconds = convertISO8601ToSeconds(duration);
       setThumbnail(thumbnailUrl);
+      setVideoDuration(durationInSeconds);
+      setLoopRange([0, durationInSeconds]);
+      setEndTime(convertSecondsToTime(durationInSeconds));
     } catch (error) {
       console.error('Error fetching video details:', error);
     }
@@ -77,10 +97,11 @@ const App = () => {
 
   // Handle manual time input
   const handleTimeInput = (event, isStart) => {
+    const timeValue = event.target.value;
     if (isStart) {
-      setStartTime(event.target.value);
+      setStartTime(timeValue);
     } else {
-      setEndTime(event.target.value);
+      setEndTime(timeValue);
     }
     setLoopRange([
       convertTimeToSeconds(startTime),
@@ -134,7 +155,7 @@ const App = () => {
         onChange={handleSliderChange}
         valueLabelDisplay="auto"
         min={0}
-        max={100} // Replace with video duration
+        max={videoDuration} // Set max to video duration
       />
 
       {/* Time Input Boxes */}
@@ -142,14 +163,14 @@ const App = () => {
         <TextField
           label="Start Time"
           value={startTime}
-          onChange={handleTimeInput}
+          onChange={(e) => handleTimeInput(e, true)}
           onDoubleClick={handleDoubleClick}
           sx={{ width: '45%' }}
         />
         <TextField
           label="End Time"
           value={endTime}
-          onChange={handleTimeInput}
+          onChange={(e) => handleTimeInput(e, false)}
           onDoubleClick={handleDoubleClick}
           sx={{ width: '45%' }}
         />
