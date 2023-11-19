@@ -4,8 +4,11 @@
   "version": "1.0.1",
   "permissions": ["scripting", "activeTab"],
   "host_permissions": ["https://www.youtube.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
-    "default_popup": "index.html"
+    "default_popup": ""
   },
   "content_scripts": [
     {

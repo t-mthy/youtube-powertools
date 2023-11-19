@@ -2,7 +2,16 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Box, Card, CardMedia } from '@mui/material';
 
+// Active tab ID to communicate with new window
+const getTabIdFromURL = () => {
+  const queryParams = new URLSearchParams(window.location.search);
+  return queryParams.get('tabId');
+};
+
 const App = () => {
+  // Extract tab ID from URL
+  const tabId = parseInt(getTabIdFromURL());
+
   // States
   const [thumbnail, setThumbnail] = useState('');
 
@@ -22,9 +31,9 @@ const App = () => {
 
   // Mount
   useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (!isNaN(tabId)) {
       chrome.tabs.sendMessage(
-        tabs[0].id,
+        tabId,
         { message: 'GetYoutubeVideoId' },
         (response) => {
           if (response && response.videoId) {
@@ -32,8 +41,8 @@ const App = () => {
           }
         }
       );
-    });
-  }, []);
+    }
+  }, [tabId]);
 
   return (
     <Box sx={{ padding: 2 }}>
